@@ -8,33 +8,28 @@ const QRScanner = () => {
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    let videoElement = videoRef.current;
-
     const startCamera = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: "environment" }, // Use back camera
-            width: { min: 640, ideal: 1280, max: 1920 }, // Flexible width
-            height: { min: 480, ideal: 720, max: 1080 }, // Flexible height
-          },
+          video: { facingMode: "environment" }, // Back camera
         });
 
-        if (videoElement) {
-          videoElement.srcObject = stream;
-          await videoElement.play();
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
         }
       } catch (error) {
         console.error("Camera initialization error:", error);
-        setErrorMessage(`Camera error: ${error.message}`);
+        setErrorMessage(`Camera error: ${error.name} - ${error.message}`);
       }
     };
 
     startCamera();
 
+    // Cleanup function
     return () => {
-      if (videoElement && videoElement.srcObject) {
-        const tracks = videoElement.srcObject.getTracks();
+      if (videoRef.current && videoRef.current.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks();
         tracks.forEach((track) => track.stop());
       }
     };
@@ -60,11 +55,11 @@ const QRScanner = () => {
         if (code) {
           setQrData(code.data);
         } else {
-          setQrData(null); // No QR code detected
+          setQrData(null);
         }
       }
 
-      requestAnimationFrame(detectQRCode); // Continue scanning
+      requestAnimationFrame(detectQRCode);
     };
 
     requestAnimationFrame(detectQRCode);
@@ -86,7 +81,7 @@ const QRScanner = () => {
           maxHeight: "400px",
           backgroundColor: "black",
         }}
-        playsInline // Mobile compatibility
+        playsInline
       />
       <canvas ref={canvasRef} style={{ display: "none" }} />
     </div>
