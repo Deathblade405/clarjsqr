@@ -37,31 +37,37 @@ const QRScanner = () => {
     };
   }, []);
 
+  const detectQRCode = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+
+    // Ensure video dimensions are loaded
+    if (videoRef.current.readyState !== videoRef.current.HAVE_ENOUGH_DATA) {
+      requestAnimationFrame(detectQRCode);
+      return;
+    }
+
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+
+    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+    if (code) {
+      setQrData(code.data); // Update state with QR code data
+    } else {
+      setQrData(null); // No QR code detected
+    }
+
+    requestAnimationFrame(detectQRCode); // Continue scanning
+  };
+
   useEffect(() => {
-    const detectQRCode = () => {
-      if (!videoRef.current || !canvasRef.current) return;
-
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-
-      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-      if (code) {
-        setQrData(code.data); // Update state with QR code data
-      } else {
-        setQrData(null); // No QR code detected
-      }
-
-      requestAnimationFrame(detectQRCode); // Continue scanning
-    };
-
-    detectQRCode();
+    requestAnimationFrame(detectQRCode); // Start QR code detection
   }, []);
 
   return (
