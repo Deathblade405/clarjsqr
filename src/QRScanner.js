@@ -10,8 +10,14 @@ const QRScanner = () => {
   useEffect(() => {
     const startCamera = async () => {
       try {
+        // Request access to the back camera with the best available resolution
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" }, // Back camera
+          video: {
+            facingMode: { exact: "environment" }, // Use the back camera
+            width: { ideal: 1920 }, // Ideal resolution width
+            height: { ideal: 1080 }, // Ideal resolution height
+            frameRate: { ideal: 60 }, // High frame rate
+          },
         });
 
         if (videoRef.current) {
@@ -19,14 +25,15 @@ const QRScanner = () => {
           await videoRef.current.play();
         }
       } catch (error) {
-        console.error("Camera initialization error:", error);
-        setErrorMessage(`Camera error: ${error.name} - ${error.message}`);
+        console.error("Error accessing camera:", error);
+        setErrorMessage(
+          `Unable to access camera. ${error.message || "Please check permissions."}`
+        );
       }
     };
 
     startCamera();
 
-    // Cleanup function
     return () => {
       if (videoRef.current && videoRef.current.srcObject) {
         const tracks = videoRef.current.srcObject.getTracks();
@@ -53,13 +60,13 @@ const QRScanner = () => {
         const code = jsQR(imageData.data, imageData.width, imageData.height);
 
         if (code) {
-          setQrData(code.data);
+          setQrData(code.data); // Display detected QR code data
         } else {
-          setQrData(null);
+          setQrData(null); // No QR code detected
         }
       }
 
-      requestAnimationFrame(detectQRCode);
+      requestAnimationFrame(detectQRCode); // Continue scanning
     };
 
     requestAnimationFrame(detectQRCode);
@@ -67,7 +74,7 @@ const QRScanner = () => {
 
   return (
     <div style={{ textAlign: "center" }}>
-      <h1>QR Scanner</h1>
+      <h1>QR Code Scanner</h1>
       {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
       {qrData ? (
         <p style={{ color: "green" }}>QR Code Data: {qrData}</p>
@@ -78,7 +85,7 @@ const QRScanner = () => {
         ref={videoRef}
         style={{
           width: "100%",
-          maxHeight: "400px",
+          height: "auto",
           backgroundColor: "black",
         }}
         playsInline
