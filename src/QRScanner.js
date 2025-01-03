@@ -8,40 +8,33 @@ const QRScanner = () => {
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
+    let videoElement = videoRef.current;
+
     const startCamera = async () => {
       try {
-        // Access the camera with optimal constraints
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: "environment" }, // Use back camera
-            width: { ideal: 2560 }, // High resolution
-            height: { ideal: 1440 },
-            frameRate: { ideal: 60 }, // Max FPS
+            width: { min: 640, ideal: 1280, max: 1920 }, // Flexible width
+            height: { min: 480, ideal: 720, max: 1080 }, // Flexible height
           },
         });
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+        if (videoElement) {
+          videoElement.srcObject = stream;
+          await videoElement.play();
         }
       } catch (error) {
-        console.error("Error accessing camera:", error);
-        setErrorMessage(`Error accessing camera: ${error.message}`);
+        console.error("Camera initialization error:", error);
+        setErrorMessage(`Camera error: ${error.message}`);
       }
     };
 
     startCamera();
 
-    // Cleanup on unmount
     return () => {
-      const video = videoRef.current;
-      const currentVideo = videoRef.current;
-      if (currentVideo && currentVideo.srcObject) {
-        const tracks = currentVideo.srcObject.getTracks();
-        tracks.forEach((track) => track.stop());
-      }
-        if (video && video.srcObject) {
-        const tracks = video.srcObject.getTracks();
+      if (videoElement && videoElement.srcObject) {
+        const tracks = videoElement.srcObject.getTracks();
         tracks.forEach((track) => track.stop());
       }
     };
