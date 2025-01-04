@@ -13,12 +13,10 @@ const QRCodeScanner = () => {
     let stream;
     const constraints = {
       video: {
-        facingMode: "environment", // Use back camera
+        facingMode: { exact: "environment" }, // Use back camera
         width: { ideal: 1920 }, // High resolution
         height: { ideal: 1080 },
         frameRate: { ideal: 30, max: 60 },
-        focusMode: "continuous", // Autofocus
-        advanced: [{ torch: torchEnabled }], // Torch support
       },
     };
 
@@ -31,7 +29,7 @@ const QRCodeScanner = () => {
         }
       } catch (error) {
         console.error("Error accessing camera:", error);
-        setErrorMessage("Error accessing camera. Please check permissions.");
+        setErrorMessage("Error accessing camera. Please check permissions or device compatibility.");
       }
     };
 
@@ -72,8 +70,17 @@ const QRCodeScanner = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const toggleTorch = () => {
-    setTorchEnabled((prev) => !prev);
+  const toggleTorch = async () => {
+    const track = videoRef.current.srcObject.getVideoTracks()[0];
+    const capabilities = track.getCapabilities();
+    if (capabilities.torch) {
+      await track.applyConstraints({
+        advanced: [{ torch: !torchEnabled }],
+      });
+      setTorchEnabled((prev) => !prev);
+    } else {
+      setErrorMessage("Torch is not supported on this device.");
+    }
   };
 
   const zoomIn = () => {
@@ -83,6 +90,8 @@ const QRCodeScanner = () => {
       const newZoom = Math.min(zoomLevel + 1, capabilities.zoom.max);
       track.applyConstraints({ advanced: [{ zoom: newZoom }] });
       setZoomLevel(newZoom);
+    } else {
+      setErrorMessage("Zoom is not supported on this device.");
     }
   };
 
@@ -93,6 +102,8 @@ const QRCodeScanner = () => {
       const newZoom = Math.max(zoomLevel - 1, capabilities.zoom.min);
       track.applyConstraints({ advanced: [{ zoom: newZoom }] });
       setZoomLevel(newZoom);
+    } else {
+      setErrorMessage("Zoom is not supported on this device.");
     }
   };
 
