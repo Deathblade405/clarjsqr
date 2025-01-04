@@ -14,9 +14,9 @@ const Camera = () => {
         // Define constraints for the camera
         const constraints = {
           video: {
-            width: { ideal: 3840 }, // Request 4K width (3840 pixels)
-            height: { ideal: 2160 }, // Request 4K height (2160 pixels)
-            frameRate: { ideal: 30, max: 60 }, // Request high frame rate for reduced lag
+            width: { ideal: 3840 }, // Request 4K width
+            height: { ideal: 2160 }, // Request 4K height
+            frameRate: { ideal: 24, max: 30 }, // Limit frame rate for reduced lag
             facingMode: 'environment', // Use the back camera
             advanced: [
               {
@@ -29,7 +29,7 @@ const Camera = () => {
           },
         };
 
-        console.log('Requesting camera with 4K resolution, autofocus, and zoom...');
+        console.log('Requesting camera with optimized 4K resolution, autofocus, and zoom...');
 
         // Get the media stream (camera input)
         stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -108,7 +108,10 @@ const Camera = () => {
         muted
         width="100%"
         height="auto"
-        style={{ border: '1px solid black' }}
+        style={{
+          border: '1px solid black',
+          objectFit: 'cover', // Optimize video rendering
+        }}
       />
       <div style={{ marginTop: '10px' }}>
         <button onClick={() => handleZoom(true)}>Zoom In</button>
