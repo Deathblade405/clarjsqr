@@ -11,18 +11,29 @@ const QRCodeScanner = () => {
 
   useEffect(() => {
     let stream;
-    const constraints = {
-      video: {
-        facingMode: { exact: "environment" }, // Use back camera
-        width: { ideal: 1920 }, // High resolution
-        height: { ideal: 1080 },
-        frameRate: { ideal: 30, max: 60 },
-      },
+    const getBestRearCamera = async () => {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter((device) => device.kind === "videoinput");
+      const rearCameras = videoDevices.filter(
+        (device) =>
+          device.label.toLowerCase().includes("back") ||
+          device.label.toLowerCase().includes("rear")
+      );
+      return rearCameras.length ? rearCameras[0] : videoDevices[0];
     };
 
     const startCamera = async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const bestCamera = await getBestRearCamera();
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: bestCamera.deviceId,
+            facingMode: "environment",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+        });
+
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play();
