@@ -14,8 +14,9 @@ const Camera = () => {
         // Define constraints for the camera
         const constraints = {
           video: {
-            width: { ideal: 1920 }, // Request 1920 pixels width
-            height: { ideal: 1080 }, // Request 1080 pixels height
+            width: { ideal: 3840 }, // Request 4K width (3840 pixels)
+            height: { ideal: 2160 }, // Request 4K height (2160 pixels)
+            frameRate: { ideal: 30, max: 60 }, // Request high frame rate for reduced lag
             facingMode: 'environment', // Use the back camera
             advanced: [
               {
@@ -28,7 +29,7 @@ const Camera = () => {
           },
         };
 
-        console.log('Requesting camera with 1080p resolution, autofocus, and zoom...');
+        console.log('Requesting camera with 4K resolution, autofocus, and zoom...');
 
         // Get the media stream (camera input)
         stream = await navigator.mediaDevices.getUserMedia(constraints);
