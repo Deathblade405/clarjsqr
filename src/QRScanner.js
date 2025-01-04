@@ -1,98 +1,122 @@
 import React, { useEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
 
-const QRScanner = () => {
+const QRCodeScanner = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const [qrData, setQrData] = useState(null);
+  const [qrCodeData, setQrCodeData] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [torchEnabled, setTorchEnabled] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   useEffect(() => {
+    let stream;
+    const constraints = {
+      video: {
+        facingMode: "environment", // Use back camera
+        width: { ideal: 1920 }, // High resolution
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30, max: 60 },
+        focusMode: "continuous", // Autofocus
+        advanced: [{ torch: torchEnabled }], // Torch support
+      },
+    };
+
     const startCamera = async () => {
       try {
-        // Request access to the back camera with the best available resolution
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { exact: "environment" }, // Use the back camera
-            width: { ideal: 1920 }, // Ideal resolution width
-            height: { ideal: 1080 }, // Ideal resolution height
-            frameRate: { ideal: 60 }, // High frame rate
-          },
-        });
-
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+          videoRef.current.play();
         }
       } catch (error) {
         console.error("Error accessing camera:", error);
-        setErrorMessage(
-          `Unable to access camera. ${error.message || "Please check permissions."}`
-        );
+        setErrorMessage("Error accessing camera. Please check permissions.");
       }
     };
 
     startCamera();
 
     return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const tracks = videoRef.current.srcObject.getTracks();
-        tracks.forEach((track) => track.stop());
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, []);
+  }, [torchEnabled]);
 
-  useEffect(() => {
-    const detectQRCode = () => {
-      if (!videoRef.current || !canvasRef.current) return;
-
-      const video = videoRef.current;
+  const scanQRCode = () => {
+    if (canvasRef.current && videoRef.current) {
       const canvas = canvasRef.current;
+      const video = videoRef.current;
       const ctx = canvas.getContext("2d");
 
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
 
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, canvas.width, canvas.height);
 
-        if (code) {
-          setQrData(code.data); // Display detected QR code data
-        } else {
-          setQrData(null); // No QR code detected
-        }
+      if (code) {
+        setQrCodeData(code.data); // QR Code content
+        console.log("QR Code found:", code.data);
+      } else {
+        console.log("Scanning...");
       }
+    }
+  };
 
-      requestAnimationFrame(detectQRCode); // Continue scanning
-    };
-
-    requestAnimationFrame(detectQRCode);
+  useEffect(() => {
+    const interval = setInterval(scanQRCode, 500); // Scan every 500ms
+    return () => clearInterval(interval);
   }, []);
 
+  const toggleTorch = () => {
+    setTorchEnabled((prev) => !prev);
+  };
+
+  const zoomIn = () => {
+    const track = videoRef.current.srcObject.getVideoTracks()[0];
+    const capabilities = track.getCapabilities();
+    if (capabilities.zoom) {
+      const newZoom = Math.min(zoomLevel + 1, capabilities.zoom.max);
+      track.applyConstraints({ advanced: [{ zoom: newZoom }] });
+      setZoomLevel(newZoom);
+    }
+  };
+
+  const zoomOut = () => {
+    const track = videoRef.current.srcObject.getVideoTracks()[0];
+    const capabilities = track.getCapabilities();
+    if (capabilities.zoom) {
+      const newZoom = Math.max(zoomLevel - 1, capabilities.zoom.min);
+      track.applyConstraints({ advanced: [{ zoom: newZoom }] });
+      setZoomLevel(newZoom);
+    }
+  };
+
   return (
-    <div style={{ textAlign: "center" }}>
+    <div>
       <h1>QR Code Scanner</h1>
-      {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
-      {qrData ? (
-        <p style={{ color: "green" }}>QR Code Data: {qrData}</p>
+      <video ref={videoRef} style={{ width: "100%" }} />
+      <canvas ref={canvasRef} style={{ display: "none" }}></canvas>
+      {qrCodeData ? (
+        <p>QR Code Data: {qrCodeData}</p>
+      ) : errorMessage ? (
+        <p style={{ color: "red" }}>{errorMessage}</p>
       ) : (
-        <p>Position a QR code in front of the camera</p>
+        <p>Point your camera at a QR code</p>
       )}
-      <video
-        ref={videoRef}
-        style={{
-          width: "100%",
-          height: "auto",
-          backgroundColor: "black",
-        }}
-        playsInline
-      />
-      <canvas ref={canvasRef} style={{ display: "none" }} />
+      <div style={{ marginTop: "10px" }}>
+        <button onClick={toggleTorch}>
+          {torchEnabled ? "Turn Torch Off" : "Turn Torch On"}
+        </button>
+        <button onClick={zoomIn}>Zoom In</button>
+        <button onClick={zoomOut}>Zoom Out</button>
+      </div>
     </div>
   );
 };
 
-export default QRScanner;
+export default QRCodeScanner;
