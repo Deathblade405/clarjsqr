@@ -1,78 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
 import jsQR from 'jsqr';
+import { Camera } from 'react-camera-pro';
 
-const Camera = () => {
-  const [hasPermission, setHasPermission] = useState(true); // Handle camera permissions
-  const videoRef = useRef(null); // Ref for the video element
-  const canvasRef = useRef(null); // Ref for the canvas element
+const CameraComponent = () => {
+  const cameraRef = useRef(null); // React Camera Pro Ref
+  const canvasRef = useRef(null); // Canvas Ref for QR Code processing
   const [zoomLevel, setZoomLevel] = useState(1); // Track zoom level
   const [focusMode, setFocusMode] = useState('continuous'); // Track focus mode
   const [qrCodeData, setQrCodeData] = useState(null); // Store decoded QR code data
 
   useEffect(() => {
-    let stream = null;
-
-    const startCamera = async () => {
-      try {
-        // Define constraints for the camera
-        const constraints = {
-          video: {
-            width: { ideal: 3840 }, // Request 4K width
-            height: { ideal: 2160 }, // Request 4K height
-            frameRate: { ideal: 24, max: 30 }, // Limit frame rate for reduced lag
-            facingMode: 'environment', // Use the back camera
-            advanced: [
-              {
-                focusMode: 'continuous', // Enable continuous autofocus if supported
-              },
-              {
-                zoom: zoomLevel, // Start with default zoom
-              },
-            ],
-          },
-        };
-
-        console.log('Requesting camera with optimized 4K resolution, autofocus, and zoom...');
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-        console.log('Camera stream obtained:', stream);
-
-        // Set the stream to the video element
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (err) {
-        console.error('Error accessing camera:', err);
-        setHasPermission(false);
-      }
-    };
-
-    startCamera();
-
-    // Cleanup the video stream when the component is unmounted
-    return () => {
-      if (stream) {
-        console.log('Cleaning up camera stream...');
-        const tracks = stream.getTracks();
-        tracks.forEach((track) => track.stop()); // Stop all video tracks
-      }
-    };
-  }, [zoomLevel]); // Restart camera when zoom level changes
-
-  useEffect(() => {
     const scanQRCode = () => {
-      const video = videoRef.current;
       const canvas = canvasRef.current;
+      const videoElement = cameraRef.current?.video;
 
-      if (video && canvas) {
+      if (canvas && videoElement) {
         const ctx = canvas.getContext('2d');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        canvas.width = videoElement.videoWidth;
+        canvas.height = videoElement.videoHeight;
 
         const renderFrame = () => {
-          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
             // Draw the current video frame onto the canvas
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
             // Get the image data from the canvas
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -96,59 +46,32 @@ const Camera = () => {
     scanQRCode();
   }, []); // Run QR code scanning when the component mounts
 
-  const handleManualFocus = async () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const track = videoRef.current.srcObject.getVideoTracks()[0];
-      const capabilities = track.getCapabilities();
-
-      if (capabilities.focusDistance) {
-        console.log('Manual focus supported. Setting focus distance to mid-range...');
-        await track.applyConstraints({
-          advanced: [{ focusMode: 'manual', focusDistance: capabilities.focusDistance.min + (capabilities.focusDistance.max - capabilities.focusDistance.min) / 2 }],
-        });
-        setFocusMode('manual');
-        console.log('Manual focus applied.');
-      } else {
-        console.log('Manual focus not supported on this device.');
-      }
-    }
+  const handleManualFocus = () => {
+    console.log('Manual focus is currently not supported by react-camera-pro.');
   };
 
-  const handleZoom = async (zoomIn) => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const track = videoRef.current.srcObject.getVideoTracks()[0];
-      const capabilities = track.getCapabilities();
-
-      if (capabilities.zoom) {
-        const newZoom = zoomIn
-          ? Math.min(zoomLevel + 0.1, capabilities.zoom.max)
-          : Math.max(zoomLevel - 0.1, capabilities.zoom.min);
-        setZoomLevel(newZoom);
-
-        await track.applyConstraints({
-          advanced: [{ zoom: newZoom }],
-        });
-        console.log(`Zoom ${zoomIn ? 'increased' : 'decreased'} to level:`, newZoom);
-      } else {
-        console.log('Zoom is not supported on this device.');
-      }
+  const handleZoom = (zoomIn) => {
+    const currentCamera = cameraRef.current;
+    if (currentCamera) {
+      const newZoom = zoomIn
+        ? Math.min(zoomLevel + 0.1, 3) // Assuming max zoom is 3x
+        : Math.max(zoomLevel - 0.1, 1); // Assuming min zoom is 1x
+      setZoomLevel(newZoom);
+      console.log(`Zoom ${zoomIn ? 'increased' : 'decreased'} to level:`, newZoom);
     }
   };
 
   return (
     <div>
-      <h1>Camera</h1>
-      {!hasPermission && <p>Permission to access the camera is denied!</p>}
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        width="100%"
-        height="auto"
-        style={{
-          border: '1px solid black',
-          objectFit: 'cover', // Optimize video rendering
+      <h1>Camera with QR Scanner</h1>
+      <Camera
+        ref={cameraRef}
+        facingMode="environment" // Use the back camera
+        numberOfCamerasCallback={(num) => console.log('Number of cameras detected:', num)}
+        errorMessages={{
+          noCameraAccessible: 'No camera accessible',
+          permissionDenied: 'Permission denied',
+          switchCamera: 'Cannot switch camera',
         }}
       />
       <canvas
@@ -169,4 +92,4 @@ const Camera = () => {
   );
 };
 
-export default Camera;
+export default CameraComponent;
