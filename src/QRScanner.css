@@ -1,0 +1,102 @@
+/* Base Styles */
+.camera-container {
+    text-align: center;
+    margin: 20px;
+    padding: 20px;
+    border: 1px solid #ccc;
+    background-color: #f4f4f4;
+    border-radius: 10px;
+    max-width: 600px; /* Max width for large screens */
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  /* Styling for the camera selector dropdown */
+  .camera-selector {
+    margin-bottom: 20px;
+  }
+  
+  .camera-selector select {
+    padding: 8px;
+    font-size: 16px;
+    width: 200px;
+    margin-bottom: 20px;
+  }
+  
+  /* Styling for the video container to make it square */
+  .video-container {
+    position: relative;
+    width: 100%; /* Adjust to 100% width */
+    padding-top: 100%; /* Makes the container square */
+    margin: 0 auto;
+    border: 1px solid #ddd;
+    overflow: hidden;
+    background-color: #000;
+  }
+  
+  /* Ensure the video element fits within the square container */
+  video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  /* Styling for zoom control slider */
+  .zoom-control {
+    margin-top: 20px;
+    font-size: 16px;
+  }
+  
+  .zoom-control input {
+    width: 80%;
+    margin-top: 10px;
+  }
+  
+  /* Mobile responsiveness */
+  @media screen and (max-width: 768px) {
+    .camera-container {
+      padding: 15px;
+      width: 90%; /* Use more width on smaller screens */
+    }
+  
+    .camera-selector select {
+      width: 100%; /* Make the select dropdown fill the width on mobile */
+      font-size: 14px;
+    }
+  
+    .zoom-control {
+      font-size: 14px;
+    }
+  
+    .zoom-control input {
+      width: 100%; /* Make the zoom slider fill the width on mobile */
+    }
+  }
+  
+  @media screen and (max-width: 480px) {
+    /* For very small devices like phones */
+    .camera-container {
+      padding: 10px;
+    }
+  
+    .camera-selector select {
+      font-size: 12px;
+    }
+  
+    .zoom-control {
+      font-size: 14px;
+    }
+  
+    .zoom-control input {
+      width: 100%; /* Ensure the slider is full-width on small phones */
+    }
+  
+    video {
+      width: 100%; /* Ensure video takes up full screen width on small devices */
+      height: auto; /* Maintain aspect ratio */
+    }
+  }
+  

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import './QRScanner.css';
 
 const CameraApp = () => {
   const [devices, setDevices] = useState([]);
@@ -8,14 +7,15 @@ const CameraApp = () => {
   const [zoom, setZoom] = useState(1); // For zoom control
 
   useEffect(() => {
-    // Get media devices when the component mounts
     const getDevices = async () => {
       try {
         const deviceList = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = deviceList.filter(device => device.kind === 'videoinput');
         setDevices(videoDevices);
-        if (videoDevices.length > 0) {
-          setSelectedDevice(videoDevices[1].deviceId); // Change to use second camera by index
+
+        // Directly select the camera at index 2,2 if possible (3rd camera in the list)
+        if (videoDevices.length > 2) {
+          setSelectedDevice(videoDevices[2].deviceId); // Use the camera at index 2
         }
       } catch (err) {
         console.error("Error accessing media devices", err);
@@ -26,14 +26,14 @@ const CameraApp = () => {
   }, []);
 
   useEffect(() => {
-    // If there's a selected device, get the stream for that device
     if (selectedDevice) {
       const getStream = async () => {
         try {
           const mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { 
+            video: {
               deviceId: selectedDevice,
-              zoom: zoom // Include zoom setting in constraints
+              facingMode: 'environment', // Focuses on back camera (helpful for QR code scanners)
+              zoom: zoom // Pass zoom settings if needed
             }
           });
           setStream(mediaStream);
@@ -45,7 +45,7 @@ const CameraApp = () => {
       getStream();
     }
 
-    // Cleanup function to stop the stream when the component unmounts or device changes
+    // Cleanup stream on unmount or device change
     return () => {
       if (stream) {
         const tracks = stream.getTracks();
@@ -64,11 +64,12 @@ const CameraApp = () => {
 
   return (
     <div className="camera-container">
-      <h1>Camera Selector</h1>
+      <h1>Camera Selector (QR Code Scanner)</h1>
 
       {devices.length > 0 ? (
         <div className="camera-selector">
-          <select value={selectedDevice} onChange={handleDeviceChange}>
+          <label htmlFor="device-select">Select Camera: </label>
+          <select id="device-select" value={selectedDevice} onChange={handleDeviceChange}>
             {devices.map((device, index) => (
               <option key={device.deviceId} value={device.deviceId}>
                 {device.label || `Camera ${index}`}
