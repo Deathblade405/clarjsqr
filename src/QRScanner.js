@@ -14,21 +14,33 @@ const Camera = () => {
 
     const startCamera = async () => {
       try {
+        // Get all media devices
         const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevice = devices.find(
-          (device) => device.kind === "videoinput" && device.label.includes("2,0")
+        console.log('Available devices:', devices); // Log available devices for debugging
+
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+        // Find the device with the "2,0" or "2,2" label for back camera
+        const backCamera = videoDevices.find(
+          (device) => device.label.includes("2,0") || device.label.includes("2,2")
         );
 
+        if (!backCamera) {
+          console.log("Back camera not found. Using facingMode: environment.");
+        }
+
+        // Set camera constraints
         const constraints = {
           video: {
-            deviceId: videoDevice ? { exact: videoDevice.deviceId } : undefined,
+            deviceId: backCamera ? { exact: backCamera.deviceId } : undefined, // Use the back camera deviceId if available
+            facingMode: "environment", // Attempt to access the back camera
             advanced: [{ focusMode: "continuous" }, { zoom: true }],
             width: { ideal: 1920 },
             height: { ideal: 1080 },
           },
         };
 
-        console.log("Requesting back camera (2,0)...");
+        console.log("Requesting camera...");
         stream = await navigator.mediaDevices.getUserMedia(constraints);
 
         if (videoRef.current) {
