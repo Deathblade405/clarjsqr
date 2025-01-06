@@ -9,29 +9,31 @@ const Camera = () => {
   const [focusMode, setFocusMode] = useState("continuous");
   const [qrCodeData, setQrCodeData] = useState(null);
   const [deviceId, setDeviceId] = useState(null); // Track selected deviceId for camera
+  const [videoDevices, setVideoDevices] = useState([]); // Store available video devices
+
+  useEffect(() => {
+    // List available devices
+    const getDevices = async () => {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === "videoinput");
+      setVideoDevices(videoDevices);
+      if (videoDevices.length > 0) {
+        setDeviceId(videoDevices[0].deviceId); // Set the first device as the default
+      }
+    };
+    getDevices();
+  }, []);
 
   useEffect(() => {
     let stream = null;
 
     const startCamera = async () => {
+      if (!deviceId) return;
+
       try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
-
-        // Log all available video devices
-        console.log('Available video devices:', videoDevices);
-
-        // Use the first video device or set deviceId from user selection
-        const selectedDevice = videoDevices.find(device => device.label.includes("2,0") || device.label.includes("2,2"));
-
-        // Set deviceId if found, or default to first device
-        const selectedDeviceId = selectedDevice ? selectedDevice.deviceId : videoDevices[0].deviceId;
-
-        setDeviceId(selectedDeviceId); // Save the selected deviceId
-
         const constraints = {
           video: {
-            deviceId: { exact: selectedDeviceId },
+            deviceId: { exact: deviceId }, // Use the selected camera's deviceId
             advanced: [{ focusMode: "continuous" }, { zoom: true }],
             width: { ideal: 1920 },
             height: { ideal: 1080 },
@@ -58,7 +60,7 @@ const Camera = () => {
         tracks.forEach((track) => track.stop());
       }
     };
-  }, [zoomLevel, deviceId]); // Re-run when deviceId changes
+  }, [deviceId, zoomLevel]); // Re-run when deviceId or zoomLevel changes
 
   useEffect(() => {
     const scanQRCode = () => {
@@ -173,12 +175,12 @@ const Camera = () => {
       <div>
         <label>Select Camera:</label>
         <select onChange={(e) => handleChangeCamera(e.target.value)} value={deviceId}>
-          {/* Options for camera selection */}
-          <option value="">Select a camera...</option>
-          {/* Add options here, the values should be deviceIds */}
-          {/* For now, it is just for demonstration, you should populate this dynamically */}
-          <option value="device-id-1">Camera 2,0</option>
-          <option value="device-id-2">Camera 2,2</option>
+          {/* Populate the camera options dynamically */}
+          {videoDevices.map((device) => (
+            <option key={device.deviceId} value={device.deviceId}>
+              {device.label || `Camera ${device.deviceId}`}
+            </option>
+          ))}
         </select>
       </div>
 
