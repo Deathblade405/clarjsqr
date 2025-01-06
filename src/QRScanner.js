@@ -8,32 +8,30 @@ const Camera = () => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [focusMode, setFocusMode] = useState("continuous");
   const [qrCodeData, setQrCodeData] = useState(null);
+  const [deviceId, setDeviceId] = useState(null); // Track selected deviceId for camera
 
   useEffect(() => {
     let stream = null;
 
     const startCamera = async () => {
       try {
-        // Get all media devices
         const devices = await navigator.mediaDevices.enumerateDevices();
-        console.log('Available devices:', devices); // Log available devices for debugging
-
         const videoDevices = devices.filter(device => device.kind === 'videoinput');
 
-        // Find the device with the "2,0" or "2,2" label for back camera
-        const backCamera = videoDevices.find(
-          (device) => device.label.includes("2,0") || device.label.includes("2,2")
-        );
+        // Log all available video devices
+        console.log('Available video devices:', videoDevices);
 
-        if (!backCamera) {
-          console.log("Back camera not found. Using facingMode: environment.");
-        }
+        // Use the first video device or set deviceId from user selection
+        const selectedDevice = videoDevices.find(device => device.label.includes("2,0") || device.label.includes("2,2"));
 
-        // Set camera constraints
+        // Set deviceId if found, or default to first device
+        const selectedDeviceId = selectedDevice ? selectedDevice.deviceId : videoDevices[0].deviceId;
+
+        setDeviceId(selectedDeviceId); // Save the selected deviceId
+
         const constraints = {
           video: {
-            deviceId: backCamera ? { exact: backCamera.deviceId } : undefined, // Use the back camera deviceId if available
-            facingMode: "environment", // Attempt to access the back camera
+            deviceId: { exact: selectedDeviceId },
             advanced: [{ focusMode: "continuous" }, { zoom: true }],
             width: { ideal: 1920 },
             height: { ideal: 1080 },
@@ -60,7 +58,7 @@ const Camera = () => {
         tracks.forEach((track) => track.stop());
       }
     };
-  }, [zoomLevel]);
+  }, [zoomLevel, deviceId]); // Re-run when deviceId changes
 
   useEffect(() => {
     const scanQRCode = () => {
@@ -162,10 +160,28 @@ const Camera = () => {
     }
   };
 
+  const handleChangeCamera = (deviceId) => {
+    setDeviceId(deviceId); // Change camera based on selected deviceId
+  };
+
   return (
     <div>
       <h1>Camera</h1>
       {!hasPermission && <p>Permission to access the camera is denied!</p>}
+
+      {/* Camera selection dropdown */}
+      <div>
+        <label>Select Camera:</label>
+        <select onChange={(e) => handleChangeCamera(e.target.value)} value={deviceId}>
+          {/* Options for camera selection */}
+          <option value="">Select a camera...</option>
+          {/* Add options here, the values should be deviceIds */}
+          {/* For now, it is just for demonstration, you should populate this dynamically */}
+          <option value="device-id-1">Camera 2,0</option>
+          <option value="device-id-2">Camera 2,2</option>
+        </select>
+      </div>
+
       <video
         ref={videoRef}
         autoPlay
