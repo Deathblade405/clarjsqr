@@ -14,19 +14,21 @@ const Camera = () => {
 
     const startCamera = async () => {
       try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevice = devices.find(
+          (device) => device.kind === "videoinput" && device.label.includes("2,0")
+        );
+
         const constraints = {
           video: {
-            facingMode: { exact: "environment" },
-            advanced: [
-              { focusMode: "continuous" },
-              { zoom: true },
-            ],
+            deviceId: videoDevice ? { exact: videoDevice.deviceId } : undefined,
+            advanced: [{ focusMode: "continuous" }, { zoom: true }],
             width: { ideal: 1920 },
             height: { ideal: 1080 },
           },
         };
 
-        console.log("Requesting back camera...");
+        console.log("Requesting back camera (2,0)...");
         stream = await navigator.mediaDevices.getUserMedia(constraints);
 
         if (videoRef.current) {
@@ -55,20 +57,37 @@ const Camera = () => {
 
       if (video && canvas) {
         const ctx = canvas.getContext("2d");
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
 
         const renderFrame = () => {
-          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          // Ensure video dimensions are available
+          if (
+            video.readyState === video.HAVE_ENOUGH_DATA &&
+            video.videoWidth > 0 &&
+            video.videoHeight > 0
+          ) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw the current video frame onto the canvas
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            // Get the image data from the canvas
+            const imageData = ctx.getImageData(
+              0,
+              0,
+              canvas.width,
+              canvas.height
+            );
+
+            // Use jsQR to scan for QR codes
             const code = jsQR(imageData.data, canvas.width, canvas.height);
             if (code) {
               console.log("QR Code detected:", code.data);
               setQrCodeData(code.data);
             }
           }
+
+          // Continue scanning
           requestAnimationFrame(renderFrame);
         };
 
@@ -76,7 +95,20 @@ const Camera = () => {
       }
     };
 
-    scanQRCode();
+    // Add a 'loadedmetadata' listener to ensure the video stream is ready
+    if (videoRef.current) {
+      const video = videoRef.current;
+
+      const handleLoadedMetadata = () => {
+        scanQRCode();
+      };
+
+      video.addEventListener("loadedmetadata", handleLoadedMetadata);
+
+      return () => {
+        video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      };
+    }
   }, []);
 
   const handleManualFocus = async () => {
@@ -89,7 +121,8 @@ const Camera = () => {
           advanced: [
             {
               focusMode: "manual",
-              focusDistance: capabilities.focusDistance.min +
+              focusDistance:
+                capabilities.focusDistance.min +
                 (capabilities.focusDistance.max - capabilities.focusDistance.min) / 2,
             },
           ],
